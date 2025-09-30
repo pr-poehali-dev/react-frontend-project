@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import Icon from "@/components/ui/icon";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { imagesApi } from "@/api/images";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -61,7 +62,7 @@ const Index = () => {
     setIsDragging(false);
   }, []);
 
-  const handleSearch = useCallback(() => {
+  const handleSearch = useCallback(async () => {
     if (!uploadedImage) {
       toast({
         title: "Загрузите изображение",
@@ -72,18 +73,26 @@ const Index = () => {
     }
 
     setIsSearching(true);
-    setTimeout(() => {
-      setSearchResults([
-        "https://v3.fal.media/files/penguin/SXvQQe0cPEXPM_ukcuPfI_output.png",
-        "https://v3.fal.media/files/penguin/SXvQQe0cPEXPM_ukcuPfI_output.png",
-        "https://v3.fal.media/files/penguin/SXvQQe0cPEXPM_ukcuPfI_output.png",
-      ]);
-      setIsSearching(false);
+    try {
+      const blob = await fetch(uploadedImage).then(r => r.blob());
+      const file = new File([blob], 'search.jpg', { type: 'image/jpeg' });
+      
+      const response = await imagesApi.searchByImage(file);
+      setSearchResults(response.results.map(r => r.thumbnailUrl));
+      
       toast({
         title: "Поиск завершен",
-        description: "Найдено 3 похожих изображения",
+        description: `Найдено ${response.total} похожих изображения`,
       });
-    }, 2000);
+    } catch (error) {
+      toast({
+        title: "Ошибка поиска",
+        description: "Не удалось выполнить поиск",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearching(false);
+    }
   }, [uploadedImage, toast]);
 
   return (

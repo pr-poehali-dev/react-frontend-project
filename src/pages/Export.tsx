@@ -2,9 +2,56 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Icon from "@/components/ui/icon";
 import { useNavigate } from "react-router-dom";
+import { imagesApi } from "@/api/images";
+import { useToast } from "@/hooks/use-toast";
+import { saveAs } from "file-saver";
+import * as XLSX from "xlsx";
 
 const Export = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleExport = async (format: 'json' | 'csv' | 'zip') => {
+    try {
+      toast({
+        title: 'Экспорт данных',
+        description: 'Подготовка файла...',
+      });
+
+      if (format === 'json') {
+        const data = await imagesApi.getSearchHistory();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        saveAs(blob, `export_${Date.now()}.json`);
+      } else if (format === 'csv') {
+        const data = await imagesApi.getSearchHistory();
+        const ws = XLSX.utils.json_to_sheet(data.flatMap(h => 
+          h.results.map(r => ({
+            timestamp: h.timestamp,
+            filename: r.filename,
+            detections: r.detections.length,
+            status: r.status,
+          }))
+        ));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Export');
+        XLSX.writeFile(wb, `export_${Date.now()}.xlsx`);
+      } else if (format === 'zip') {
+        const blob = await imagesApi.exportData('zip');
+        saveAs(blob, `images_${Date.now()}.zip`);
+      }
+
+      toast({
+        title: 'Экспорт завершен',
+        description: 'Файл успешно скачан',
+      });
+    } catch (error) {
+      toast({
+        title: 'Ошибка экспорта',
+        description: 'Не удалось экспортировать данные',
+        variant: 'destructive',
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F8FAFC] to-[#E2E8F0] p-6">
@@ -35,7 +82,7 @@ const Export = () => {
                   <p className="text-sm text-muted-foreground mb-4">
                     Экспорт данных в JSON для дальнейшей обработки
                   </p>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => handleExport('json')}>
                     <Icon name="Download" className="mr-2" size={16} />
                     Скачать JSON
                   </Button>
@@ -53,9 +100,9 @@ const Export = () => {
                   <p className="text-sm text-muted-foreground mb-4">
                     Экспорт в таблицу для работы в Excel
                   </p>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => handleExport('csv')}>
                     <Icon name="Download" className="mr-2" size={16} />
-                    Скачать CSV
+                    Скачать XLSX
                   </Button>
                 </div>
               </div>
@@ -71,7 +118,7 @@ const Export = () => {
                   <p className="text-sm text-muted-foreground mb-4">
                     Скачать все изображения одним архивом
                   </p>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => handleExport('zip')}>
                     <Icon name="Download" className="mr-2" size={16} />
                     Скачать ZIP
                   </Button>

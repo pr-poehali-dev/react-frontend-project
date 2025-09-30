@@ -2,30 +2,24 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Icon from "@/components/ui/icon";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { imagesApi } from "@/api/images";
 
 const History = () => {
   const navigate = useNavigate();
 
-  const mockHistory = [
-    {
-      id: 1,
-      image: "https://v3.fal.media/files/penguin/SXvQQe0cPEXPM_ukcuPfI_output.png",
-      date: "30 сентября 2025, 14:32",
-      results: 12,
-    },
-    {
-      id: 2,
-      image: "https://v3.fal.media/files/penguin/SXvQQe0cPEXPM_ukcuPfI_output.png",
-      date: "29 сентября 2025, 09:15",
-      results: 8,
-    },
-    {
-      id: 3,
-      image: "https://v3.fal.media/files/penguin/SXvQQe0cPEXPM_ukcuPfI_output.png",
-      date: "28 сентября 2025, 16:47",
-      results: 15,
-    },
-  ];
+  const { data: searchHistory, isLoading } = useQuery({
+    queryKey: ['searchHistory'],
+    queryFn: () => imagesApi.getSearchHistory(),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F8FAFC] to-[#E2E8F0] flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Загрузка истории...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F8FAFC] to-[#E2E8F0] p-6">
@@ -45,39 +39,47 @@ const History = () => {
             Все ваши предыдущие запросы
           </p>
 
-          <div className="space-y-4">
-            {mockHistory.map((item) => (
-              <Card
-                key={item.id}
-                className="p-4 hover-scale cursor-pointer transition-all hover:shadow-lg"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-24 h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                    <img
-                      src={item.image}
-                      alt="Search query"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Icon name="Clock" size={16} className="text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">{item.date}</span>
+          {searchHistory && searchHistory.length > 0 ? (
+            <div className="space-y-4">
+              {searchHistory.map((item) => (
+                <Card
+                  key={item.id}
+                  className="p-4 hover-scale cursor-pointer transition-all hover:shadow-lg"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-24 h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                      <img
+                        src={item.imageUrl}
+                        alt="Search query"
+                        className="w-full h-full object-cover"
+                      />
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Найдено результатов: <span className="font-semibold text-foreground">{item.results}</span>
-                    </p>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Icon name="Clock" size={16} className="text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          {new Date(item.timestamp).toLocaleString('ru-RU')}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Найдено результатов: <span className="font-semibold text-foreground">{item.results.length}</span>
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 w-32">
+                      {item.results.slice(0, 2).map((result) => (
+                        <img
+                          key={result.id}
+                          src={result.thumbnailUrl}
+                          alt="result"
+                          className="w-full h-12 object-cover rounded"
+                        />
+                      ))}
+                    </div>
                   </div>
-                  <Button variant="ghost" size="sm">
-                    <Icon name="Search" className="mr-2" size={16} />
-                    Повторить поиск
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
-
-          {mockHistory.length === 0 && (
+                </Card>
+              ))}
+            </div>
+          ) : (
             <Card className="p-12 text-center">
               <Icon name="History" className="mx-auto mb-4 text-muted-foreground" size={48} />
               <h3 className="text-lg font-semibold mb-2">История пуста</h3>

@@ -105,3 +105,5 @@
     @apply transition-transform duration-200 hover:scale-105;
   }
 }
+
+@import "leaflet/dist/leaflet.css";
